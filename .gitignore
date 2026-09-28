@@ -1,0 +1,73 @@
+# ─── Logs ────────────────────────────────────────────────────
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ─── Dependencies / build output ─────────────────────────────
+node_modules
+dist
+dist-ssr
+*.local
+
+# ─── Secrets — DO NOT COMMIT ─────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+service-account*.json
+google-services.json
+GoogleService-Info.plist
+
+# ─── Firebase ────────────────────────────────────────────────
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# ─── Functions ───────────────────────────────────────────────
+functions/node_modules/
+functions/lib/
+functions/.runtimeconfig.json
+functions/.env
+
+# ─── Android / Capacitor build artifacts ─────────────────────
+android/.gradle/
+android/build/
+android/app/build/
+android/captures/
+android/local.properties
+android/app/release/
+android/app/debug/
+android/key.properties
+android/keystore.properties
+android/*.keystore
+android/*.jks
+android/capacitor-cordova-android-plugins/build/
+*.apk
+*.aab
+
+# ─── iOS (in case Capacitor iOS is added later) ──────────────
+ios/Pods/
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/
+
+# ─── Editor & OS ─────────────────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+Thumbs.db
+
+# ─── TypeScript build info ───────────────────────────────────
+*.tsbuildinfo

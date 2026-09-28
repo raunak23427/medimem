@@ -1,0 +1,34 @@
+rules_version = '2';
+
+// Storage layout:
+//   users/{uid}/records/{recordId}/{filename}   — original uploaded document
+//   users/{uid}/records/{recordId}/thumb.jpg    — generated thumbnail (server-side)
+//
+// All access is owner-only. The Cloud Function `mintEmergencyShare` reads from
+// Storage with the admin SDK when a public share is generated; clients never
+// receive direct links to other users' files.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function isImageOrPdf() {
+      return request.resource.contentType.matches('image/.*')
+        || request.resource.contentType == 'application/pdf';
+    }
+    function under10MB() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+
+    match /users/{uid}/records/{recordId}/{filename=**} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && isImageOrPdf() && under10MB();
+      allow delete: if isOwner(uid);
+    }
+
+    // Deny everything else by default.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

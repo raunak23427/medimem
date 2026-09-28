@@ -1,0 +1,87 @@
+rules_version = '2';
+
+// MediMem Firestore security rules.
+// Principle: a user can only read/write data under their own /users/{uid} tree.
+// Public emergency cards are exposed via a separate /emergencyShares/{token} doc
+// minted server-side by a Cloud Function — never reachable by client writes.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+    function emailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+    function isValidString(v, maxLen) {
+      return v is string && v.size() <= maxLen;
+    }
+
+    // ─── User profile ─────────────────────────────────────────
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && isValidString(request.resource.data.name, 120)
+        && isValidString(request.resource.data.email, 320);
+      allow update: if isOwner(uid)
+        && request.resource.data.id == uid
+        && isValidString(request.resource.data.name, 120);
+      allow delete: if false; // soft-delete via flag, never hard-delete profile
+
+      // ─── Family members ─────────────────────────────────────
+      match /familyMembers/{memberId} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && isValidString(request.resource.data.name, 120)
+          && request.resource.data.age is number
+          && request.resource.data.age >= 0
+          && request.resource.data.age <= 130;
+        allow delete: if isOwner(uid);
+      }
+
+      // ─── Medical records ────────────────────────────────────
+      match /records/{recordId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && isValidString(request.resource.data.memberId, 64)
+          && isValidString(request.resource.data.documentType, 32);
+        allow update: if isOwner(uid);
+        // Soft-delete: clients update deletedAt; hard delete only via Function w/ admin SDK
+        allow delete: if false;
+      }
+
+      // ─── Insights ───────────────────────────────────────────
+      match /insights/{insightId} {
+        allow read: if isOwner(uid);
+        // Insights are generated server-side; clients can mark them read but not create.
+        allow create: if false;
+        allow update: if isOwner(uid)
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['isRead']);
+        allow delete: if false;
+      }
+
+      // ─── Audit log ──────────────────────────────────────────
+      // Append-only from client; never modifiable, never deletable.
+      match /audit/{eventId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && request.resource.data.uid == uid
+          && isValidString(request.resource.data.action, 64);
+        allow update, delete: if false;
+      }
+    }
+
+    // ─── Public emergency share tokens ────────────────────────
+    // Documents minted by the `mintEmergencyShare` Cloud Function.
+    // Anyone with the link can read the embedded snapshot; nobody can write from client.
+    match /emergencyShares/{token} {
+      allow read: if resource.data.revokedAt == null
+        && (resource.data.expiresAt == null || resource.data.expiresAt > request.time);
+      allow create, update, delete: if false;
+    }
+  }
+}
