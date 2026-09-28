@@ -66,7 +66,7 @@ npm run dev
 
 Open http://localhost:5173.
 
-In demo mode, health insights come from the built-in rule engine. Document scanning, chat
+In demo mode, health insights will come from the built-in rule engine. Document scanning, chat
 and the doctor summary need an AI backend: the production app calls Hugging Face through a
 server-side proxy in Cloud Functions, so no key ever reaches the browser.
 
